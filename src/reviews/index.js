@@ -4,10 +4,10 @@ import RevModel from "./schema.js";
 
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get("/articles/:id/reviews/:_reviewId", async (req, res, next) => {
   try {
-    const reviews = await RevModel.find();
-    res.send(reviews);
+    const _reviewId = req.params._reviewId;
+    const { review } = await review;
   } catch (error) {
     next(error);
   }

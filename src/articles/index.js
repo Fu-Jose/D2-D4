@@ -1,12 +1,24 @@
 import express from "express";
 import ArticleModel from "./schema.js";
-import { v4 as uuid } from "uuid";
+import RevModel from "../reviews/schema.js";
+import q2m from "query-to-mongo";
+import mongoose from "mongoose";
 const articlesRouter = express.Router();
 
 articlesRouter.get("/", async (req, res, next) => {
   try {
-    const articles = await ArticleModel.find();
-    res.send(articles);
+    const query = q2m(req.query);
+    const total = await ArticleModel.countDocuments(query.criteria);
+
+    const articles = await ArticleModel.find(
+      query.criteria,
+      query.options.fields
+    )
+      .skip(query.options.skip)
+      .limit(query.options.limit)
+      .sort(query.options.sort);
+
+    res.send({ links: query.links("/articles", total), articles });
   } catch (error) {
     next(error);
   }
@@ -54,6 +66,30 @@ articlesRouter.delete("/:_id", async (req, res, next) => {
       res.send("DELETED");
     } else {
       next();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+articlesRouter.get("/:_id/reviews/:_rid", async (req, res, next) => {
+  try {
+    const { reviews } = await ArticleModel.findOne(
+      {
+        _id: mongoose.Types.ObjectId(req.params._id),
+      },
+      {
+        reviews: {
+          $elemMatch: { _id: mongoose.Types.ObjectId(req.params._rid) },
+        },
+      }
+    );
+    if (reviews && reviews.length > 0) {
+      res.send(reviews[0]);
+    } else {
+      const error = new Error();
+      error.httpStatusCode = 404;
+      next(error);
     }
   } catch (error) {
     next(error);
