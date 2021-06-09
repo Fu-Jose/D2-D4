@@ -2,6 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 
 import UserModel from "./schema.js";
+import { adminOnly, jwtAuthMiddleware } from "../auth/index.js";
+import { authenticate, refreshToken } from "../auth/tools.js";
 
 const usersRouter = express.Router();
 
@@ -70,6 +72,33 @@ usersRouter.delete("/:id", async (req, res, next) => {
       error.httpStatusCode = 404;
       next(error);
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+usersRouter.post(
+  "/register",
+  authenticate,
+  jwtAuthMiddleware,
+  async (req, res, next) => {
+    try {
+      const newUser = new UserModel(req.body);
+      const { _id } = await newUser.save();
+
+      res.status(201).send(_id);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+usersRouter.post("/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    const user = await UserModel.checkCredentials(email, password);
+    const tokens = await authenticate(user);
+    res.send(tokens);
   } catch (error) {
     next(error);
   }
