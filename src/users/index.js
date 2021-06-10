@@ -1,6 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
-
+import passport from "passport";
 import UserModel from "./schema.js";
 import { adminOnly, jwtAuthMiddleware } from "../auth/index.js";
 import { authenticate, refreshToken } from "../auth/tools.js";
@@ -16,22 +16,22 @@ usersRouter.get("/", async (req, res, next) => {
   }
 });
 
-usersRouter.get("/:id", async (req, res, next) => {
-  try {
-    const id = req.params.id;
-    const user = await UserModel.findById(id);
-    if (user) {
-      res.send(user);
-    } else {
-      const error = new Error();
-      error.httpStatusCode = 404;
-      next(error);
-    }
-  } catch (error) {
-    console.log(error);
-    next("While reading users list a problem occurred!");
-  }
-});
+// usersRouter.get("/:id", async (req, res, next) => {
+//   try {
+//     const id = req.params.id;
+//     const user = await UserModel.findById(id);
+//     if (user) {
+//       res.send(user);
+//     } else {
+//       const error = new Error();
+//       error.httpStatusCode = 404;
+//       next(error);
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     next("While reading users list a problem occurred!");
+//   }
+// });
 
 usersRouter.post("/", async (req, res, next) => {
   try {
@@ -93,7 +93,7 @@ usersRouter.post(
   }
 );
 
-usersRouter.post("/login", async (req, res, next) => {
+usersRouter.post("/login", jwtAuthMiddleware, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await UserModel.checkCredentials(email, password);
@@ -103,5 +103,21 @@ usersRouter.post("/login", async (req, res, next) => {
     next(error);
   }
 });
+
+usersRouter.get(
+  "/googleLogin",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+usersRouter.get(
+  "/googleRedirect",
+  passport.authenticate("google", { scope: ["profile", "email"] }),
+  async (req, res, next) => {
+    try {
+      console.log("GOOGLES OK");
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default usersRouter;
